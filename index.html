@@ -687,6 +687,37 @@
   ];
 
 
+  // ===== External scopes loader (GitHub dataset) =====
+  async function loadExternalScopes(){
+    try{
+      const r = await fetch("./data/scopes.json", { cache:"no-store" });
+      if(!r.ok) throw new Error("HTTP " + r.status);
+      const ext = await r.json();
+      if(!Array.isArray(ext)) return;
+
+      const normalized = ext
+        .filter(s => s && s.name)
+        .map(s => ({
+          name: s.name,
+          aperture: (s.aperture_mm ?? s.aperture ?? null),
+          focal: (s.focal_mm ?? s.focal ?? null),
+          family: (s.brand ?? s.family ?? "EXT"),
+          correctors: [1.0]
+        }))
+        .filter(s => s.focal); // focal required for FOV math
+
+      if(normalized.length){
+        ASKAR.push(...normalized);
+        populateDatalists();
+        console.log("External scopes loaded:", normalized.length);
+      }
+    }catch(e){
+      console.warn("External scopes not loaded (using built-in list):", e);
+    }
+  }
+
+
+
   // Lenses (popular astrophotography-friendly options; focal length behaves like telescope FL)
   // Note: Zoom lenses use focalMin/focalMax and state.zoomFocal (mm).
   const LENSES = [
@@ -2339,6 +2370,7 @@ reducer: 1.0,
   }
 
   init();
+  loadExternalScopes();
 
   // ===== AstroBin Popup (no API key) =====
   function abOpen(query, titleText, subText){
